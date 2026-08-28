@@ -136,10 +136,10 @@ def generar_turnos(excepciones_ui, lista_empleados):
     return pd.DataFrame(datos_tabla), turnos_totales, turnos_noche
 
 # --- 3. INTERFAZ VISUAL ---
-st.title("⛽ Gestor Inteligente de Turnos")
+st.title("Gestor Inteligente de Turnos")
 
 # Aquí se declaran las variables que causaron el error
-tab_turnos, tab_personal = st.tabs(["📅 Generar Turnos", "👥 Gestión de Personal"])
+tab_turnos, tab_personal = st.tabs(["Generar Turnos", "Gestión de Personal"])
 
 # ==========================================
 # PESTAÑA 1: GENERACIÓN DE TURNOS
@@ -151,17 +151,17 @@ with tab_turnos:
     col_izquierda, col_derecha = st.columns([1, 3])
 
     with col_izquierda:
-        st.header("🛠️ Panel de Novedades")
+        st.header("Panel de Novedades")
         opciones_select = ["Ninguno"] + empleados_activos
         emp_excepcion = st.selectbox("Empleado con novedad:", opciones_select)
         dia_excepcion = st.selectbox("Día que no asiste:", ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
         
-        generar = st.button("Generar Semana 🚀", type="primary")
+        generar = st.button("Generar Semana", type="primary")
 
     with col_derecha:
         if generar:
             if len(empleados_activos) < 4:
-                st.error("⚠️ No hay suficientes empleados activos en la base de datos para cubrir los turnos.")
+                st.error("No hay suficientes empleados activos en la base de datos para cubrir los turnos.")
             else:
                 excepciones_activas = []
                 if emp_excepcion != "Ninguno":
@@ -170,7 +170,7 @@ with tab_turnos:
                 
                 tabla_resultados, metricas_totales, metricas_noches = generar_turnos(excepciones_activas, empleados_activos)
                 
-                st.subheader("📅 Calendario Semanal Generado")
+                st.subheader("Calendario Semanal Generado")
                 st.dataframe(tabla_resultados, use_container_width=True, hide_index=True)
                 
                 buffer_excel = io.BytesIO()
@@ -181,17 +181,17 @@ with tab_turnos:
                         max_len = max([len(str(c.value)) for c in col] + [5])
                         writer.sheets['Turnos'].column_dimensions[col_letra].width = max_len + 2
 
-                st.download_button(label="📥 Exportar a Excel", data=buffer_excel.getvalue(),
+                st.download_button(label="Exportar a Excel", data=buffer_excel.getvalue(),
                                    file_name="Turnos_Semana.xlsx", 
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 
                 st.divider()
-                st.subheader("📊 Auditoría de Carga (Equidad)")
+                st.subheader("Auditoría de Carga (Equidad)")
                 cols_metricas = st.columns(4)
                 for i, emp in enumerate(empleados_activos):
                     cols_metricas[i % 4].metric(label=f"👷 {emp}", value=f"{metricas_totales[emp]} turnos", delta=f"{metricas_noches[emp]} noches", delta_color="off")
         else:
-            st.info("👈 Configura las excepciones y presiona 'Generar Semana'.")
+            st.info("Configura las excepciones y presiona 'Generar Semana'.")
 
 # ==========================================
 # PESTAÑA 2: GESTIÓN DE PERSONAL
@@ -203,7 +203,7 @@ with tab_personal:
     col_add, col_list = st.columns([1, 2])
     
     with col_add:
-        st.subheader("➕ Nuevo Empleado")
+        st.subheader("Nuevo Empleado")
         nuevo_nombre = st.text_input("Nombre completo:")
         if st.button("Guardar Empleado"):
             if nuevo_nombre:
@@ -216,7 +216,7 @@ with tab_personal:
                 st.warning("Debes escribir un nombre.")
                 
     with col_list:
-        st.subheader("📋 Plantilla Actual")
+        st.subheader("Plantilla Actual")
         df_personal = obtener_empleados(solo_activos=False)
         
         for index, row in df_personal.iterrows():
