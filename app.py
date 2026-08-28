@@ -77,55 +77,71 @@ def generar_turnos(excepciones_ui, lista_empleados):
 
     for dia in dias:
         fila_dia = {"Día": dia}
-        
-        # NUEVO: Rastrear quiénes ya trabajaron en ESTE día calendario
-        trabajaron_hoy = [] 
+        trabajaron_hoy = [] # Registro estricto del día
         
         for turno in turnos:
             asignados_este_turno = []
-            candidatos_viables = []
-
+            
+            # Separamos en dos grupos para priorizar
+            candidatos_ideales = []
+            candidatos_emergencia = [] 
+            
             for emp in lista_empleados:
-                # 1. ¿Tiene una excepción para no venir hoy?
+                # Reglas estrictas e inquebrantables de salud y novedades
                 if (dia, emp) in excepciones_ui: continue
-                
-                # 2. NUEVA REGLA: ¿Ya trabajó un turno hoy?
                 if emp in trabajaron_hoy: continue
+                if (indice_turno_actual - ultimo_turno[emp]) < 2: continue # Mínimo 8h descanso
                 
-                # 3. ¿Tiene el descanso mínimo de 8h desde su último turno? (Ej. Domingo Noche a Lunes Mañana)
-                if (indice_turno_actual - ultimo_turno[emp]) < 2: continue
-                
-                # 4. ¿Ya cumplió su límite de noches en la semana?
-                if turno == "Noche" and turnos_noche[emp] >= 2: continue
-                
-                candidatos_viables.append(emp)
+                # Regla flexible (Límite de 2 noches)
+                if turno == "Noche" and turnos_noche[emp] >= 2:
+                    candidatos_emergencia.append(emp) # Pasan a la banca de reserva
+                else:
+                    candidatos_ideales.append(emp) # Cumplen todo perfecto
 
-            # Ordenar para garantizar equidad
-            random.shuffle(candidatos_viables)
-            candidatos_viables.sort(key=lambda x: turnos_totales[x])
+            # Ordenar ambos grupos priorizando a los que tienen menos horas
+            random.shuffle(candidatos_ideales)
+            candidatos_ideales.sort(key=lambda x: turnos_totales[x])
+            
+            random.shuffle(candidatos_emergencia)
+            candidatos_emergencia.sort(key=lambda x: turnos_totales[x])
 
-            # Asignar a los 2 mejores candidatos disponibles
+            # PLAN A: Intentar llenar con los ideales
+            candidatos_viables = candidatos_ideales.copy()
+            
+            # PLAN B: Si no hay 2 ideales, sacamos de la banca de emergencia (rompen regla de noche)
+            if len(candidatos_viables) < 2:
+                faltantes = 2 - len(candidatos_viables)
+                candidatos_viables.extend(candidatos_emergencia[:faltantes])
+
+            # PLAN C: (Caso catastrófico) Si aún no hay 2 personas, alguien dobla turno (Mañana y Noche)
+            if len(candidatos_viables) < 2:
+                emergencia_extrema = [e for e in lista_empleados if e not in candidatos_viables 
+                                      and (dia, e) not in excepciones_ui 
+                                      and (indice_turno_actual - ultimo_turno[e]) >= 2] # Garantiza las 8h de descanso
+                random.shuffle(emergencia_extrema)
+                faltantes = 2 - len(candidatos_viables)
+                candidatos_viables.extend(emergencia_extrema[:faltantes])
+
+            # Asignación final en la base de datos temporal
             for emp in candidatos_viables[:2]: 
                 asignados_este_turno.append(emp)
                 turnos_totales[emp] += 1
                 if turno == "Noche": turnos_noche[emp] += 1
                 ultimo_turno[emp] = indice_turno_actual
-                
-                # NUEVO: Agregarlo a la lista de los que ya trabajaron hoy
                 trabajaron_hoy.append(emp)
 
-            fila_dia[turno] = " y ".join(asignados_este_turno)
+            # Evitar el fallo visual si ocurre un imposible matemático
+            if len(asignados_este_turno) == 2:
+                fila_dia[turno] = " y ".join(asignados_este_turno)
+            elif len(asignados_este_turno) == 1:
+                fila_dia[turno] = f"{asignados_este_turno[0]} (FALTA 1)"
+            else:
+                fila_dia[turno] = "TURNO VACÍO"
+                
             indice_turno_actual += 1
             
         datos_tabla.append(fila_dia)
     return pd.DataFrame(datos_tabla), turnos_totales, turnos_noche
-
-# --- 3. INTERFAZ VISUAL ---
-st.title("⛽ Gestor Inteligente de Turnos")
-
-# Creamos las dos pestañas de navegación
-tab_turnos, tab_personal = st.tabs(["📅 Generar Turnos", "👥 Gestión de Personal"])
-
 # ==========================================
 # PESTAÑA 1: GENERACIÓN DE TURNOS
 # ==========================================
