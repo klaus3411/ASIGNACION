@@ -77,24 +77,42 @@ def generar_turnos(excepciones_ui, lista_empleados):
 
     for dia in dias:
         fila_dia = {"Día": dia}
+        
+        # NUEVO: Rastrear quiénes ya trabajaron en ESTE día calendario
+        trabajaron_hoy = [] 
+        
         for turno in turnos:
             asignados_este_turno = []
             candidatos_viables = []
 
             for emp in lista_empleados:
+                # 1. ¿Tiene una excepción para no venir hoy?
                 if (dia, emp) in excepciones_ui: continue
+                
+                # 2. NUEVA REGLA: ¿Ya trabajó un turno hoy?
+                if emp in trabajaron_hoy: continue
+                
+                # 3. ¿Tiene el descanso mínimo de 8h desde su último turno? (Ej. Domingo Noche a Lunes Mañana)
                 if (indice_turno_actual - ultimo_turno[emp]) < 2: continue
+                
+                # 4. ¿Ya cumplió su límite de noches en la semana?
                 if turno == "Noche" and turnos_noche[emp] >= 2: continue
+                
                 candidatos_viables.append(emp)
 
+            # Ordenar para garantizar equidad
             random.shuffle(candidatos_viables)
             candidatos_viables.sort(key=lambda x: turnos_totales[x])
 
+            # Asignar a los 2 mejores candidatos disponibles
             for emp in candidatos_viables[:2]: 
                 asignados_este_turno.append(emp)
                 turnos_totales[emp] += 1
                 if turno == "Noche": turnos_noche[emp] += 1
                 ultimo_turno[emp] = indice_turno_actual
+                
+                # NUEVO: Agregarlo a la lista de los que ya trabajaron hoy
+                trabajaron_hoy.append(emp)
 
             fila_dia[turno] = " y ".join(asignados_este_turno)
             indice_turno_actual += 1
